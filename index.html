@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleep Tracker - 睡眠記録アプリ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .moon-icon {
+            font-size: 3em;
+            margin-bottom: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .main-controls {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-display {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .status-text {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .time-display {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn.wake-up {
+            background: linear-gradient(45deg, #4ecdc4, #44a08d);
+        }
+
+        .sleep-stats {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+
+        .stat-label {
+            font-weight: bold;
+        }
+
+        .stat-value {
+            color: #ffd700;
+        }
+
+        .sleep-history {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .date {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+
+        .duration {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .tips {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .tip-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 0.9em;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .clear-btn {
+            background: linear-gradient(45deg, #ff4757, #ff3742);
+            padding: 8px 16px;
+            font-size: 0.9em;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .main-controls {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="moon-icon">🌙</div>
+            <h1>Sleep Tracker</h1>
+            <p>あなたの睡眠を記録・分析</p>
+        </div>
+
+        <div class="main-controls">
+            <div class="status-display">
+                <div class="status-text" id="statusText">今日もお疲れ様でした</div>
+                <div class="time-display" id="timeDisplay">--:--</div>
+            </div>
+            
+            <div style="text-align: center;">
+                <button class="btn" id="sleepBtn" onclick="startSleep()">
+                    💤 おやすみ
+                </button>
+                <button class="btn wake-up hidden" id="wakeBtn" onclick="wakeUp()">
+                    ☀️ 起床
+                </button>
+            </div>
+        </div>
+
+        <div class="sleep-stats">
+            <h3 style="margin-bottom: 15px;">📊 睡眠統計</h3>
+            <div class="stat-item">
+                <span class="stat-label">今夜の睡眠時間</span>
+                <span class="stat-value" id="currentSleep">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">平均睡眠時間</span>
+                <span class="stat-value" id="avgSleep">--</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">総記録日数</span>
+                <span class="stat-value" id="totalDays">0日</span>
+            </div>
+        </div>
+
+        <div class="sleep-history">
+            <h3 style="margin-bottom: 15px;">📅 睡眠記録</h3>
+            <div id="historyList">
+                <p style="text-align: center; opacity: 0.7;">まだ記録がありません</p>
+            </div>
+            <button class="btn clear-btn" onclick="clearHistory()">記録をクリア</button>
+        </div>
+
+        <div class="tips">
+            <h3 style="margin-bottom: 15px;">💡 睡眠のコツ</h3>
+            <div class="tip-item">🕘 毎日同じ時間に寝起きする</div>
+            <div class="tip-item">📱 寝る1時間前にスマホを見ない</div>
+            <div class="tip-item">🌡️ 寝室の温度を18-22°Cに保つ</div>
+            <div class="tip-item">☕ 午後2時以降のカフェイン摂取を控える</div>
+        </div>
+    </div>
+
+    <script>
+        let sleepData = [];
+        let currentSleepStart = null;
+        let currentSleepTimer = null;
+
+        // ページ読み込み時の初期化
+        window.addEventListener('load', function() {
+            loadSleepData();
+            updateStats();
+            updateHistory();
+            updateCurrentTime();
+            
+            // 1秒ごとに時間を更新
+            setInterval(updateCurrentTime, 1000);
+        });
+
+        // 現在時刻の更新
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ja-JP', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            if (!currentSleepStart) {
+                document.getElementById('timeDisplay').textContent = timeString;
+            }
+        }
+
+        // 睡眠開始
+        function startSleep() {
+            currentSleepStart = new Date();
+            
+            document.getElementById('statusText').textContent = '💤 おやすみなさい';
+            document.getElementById('sleepBtn').classList.add('hidden');
+            document.getElementById('wakeBtn').classList.remove('hidden');
+            
+            // 睡眠時間のリアルタイム表示
+            currentSleepTimer = setInterval(function() {
+                const now = new Date();
+                const duration = now - currentSleepStart;
+                const hours = Math.floor(duration / (1000 * 60 * 60));
+                const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+                
+                document.getElementById('timeDisplay').textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                document.getElementById('currentSleep').textContent = 
+                    `${hours}時間${minutes}分`;
+            }, 1000);
+        }
+
+        // 起床
+        function wakeUp() {
+            if (!currentSleepStart) return;
+            
+            const wakeTime = new Date();
+            const duration = wakeTime - currentSleepStart;
+            const hours = Math.floor(duration / (1000 * 60 * 60));
+            const minutes = Math.floor((duration % (1000 * 60 * 60)) / (1000 * 60));
+            
+            // 睡眠データを保存
+            const sleepRecord = {
+                date: currentSleepStart.toLocaleDateString('ja-JP'),
+                sleepTime: currentSleepStart.toLocaleTimeString('ja-JP', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                }),
+                wakeTime: wakeTime.toLocaleTimeString('ja-JP', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                }),
+                duration: duration,
+                durationText: `${hours}時間${minutes}分`
+            };
+            
+            sleepData.unshift(sleepRecord);
+            saveSleepData();
+            
+            // UI更新
+            document.getElementById('statusText').textContent = '☀️ おはようございます！';
+            document.getElementById('sleepBtn').classList.remove('hidden');
+            document.getElementById('wakeBtn').classList.add('hidden');
+            
+            // タイマーをクリア
+            clearInterval(currentSleepTimer);
+            currentSleepStart = null;
+            
+            updateStats();
+            updateHistory();
+            updateCurrentTime();
+        }
+
+        // 統計の更新
+        function updateStats() {
+            if (sleepData.length === 0) {
+                document.getElementById('avgSleep').textContent = '--';
+                document.getElementById('totalDays').textContent = '0日';
+                return;
+            }
+            
+            const totalDuration = sleepData.reduce((sum, record) => sum + record.duration, 0);
+            const avgDuration = totalDuration / sleepData.length;
+            const avgHours = Math.floor(avgDuration / (1000 * 60 * 60));
+            const avgMinutes = Math.floor((avgDuration % (1000 * 60 * 60)) / (1000 * 60));
+            
+            document.getElementById('avgSleep').textContent = `${avgHours}時間${avgMinutes}分`;
+            document.getElementById('totalDays').textContent = `${sleepData.length}日`;
+        }
+
+        // 履歴の更新
+        function updateHistory() {
+            const historyList = document.getElementById('historyList');
+            
+            if (sleepData.length === 0) {
+                historyList.innerHTML = '<p style="text-align: center; opacity: 0.7;">まだ記録がありません</p>';
+                return;
+            }
+            
+            historyList.innerHTML = sleepData.slice(0, 10).map(record => `
+                <div class="history-item">
+                    <div>
+                        <div>${record.date}</div>
+                        <div class="date">${record.sleepTime} - ${record.wakeTime}</div>
+                    </div>
+                    <div class="duration">${record.durationText}</div>
+                </div>
+            `).join('');
+        }
+
+        // データの保存
+        function saveSleepData() {
+            // 通常のWebアプリケーションではlocalStorageを使用しますが、
+            // この環境では使用できないため、メモリ内に保存
+            // 実際のアプリではlocalStorage.setItem('sleepData', JSON.stringify(sleepData));
+        }
+
+        // データの読み込み
+        function loadSleepData() {
+            // 通常のWebアプリケーションではlocalStorageから読み込み
+            // const saved = localStorage.getItem('sleepData');
+            // if (saved) sleepData = JSON.parse(saved);
+        }
+
+        // 記録のクリア
+        function clearHistory() {
+            if (confirm('すべての睡眠記録を削除しますか？')) {
+                sleepData = [];
+                saveSleepData();
+                updateStats();
+                updateHistory();
+                document.getElementById('currentSleep').textContent = '--';
+            }
+        }
+    </script>
+</body>
+</html>
