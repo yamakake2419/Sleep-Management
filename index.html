@@ -1,518 +1,342 @@
-import React, { useState, useEffect } from 'react';
-import { Moon, Sun, Clock, BarChart3, Calendar, TrendingUp, Award, Zap, Trash2, AlertTriangle } from 'lucide-react';
+## index.html
 
-const SleepTrackerApp = () => {
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [sleepRecords, setSleepRecords] = useState([
-    {
-      id: 1,
-      date: '2025-01-20',
-      bedtime: '23:30',
-      wakeupTime: '07:00',
-      sleepDuration: 7.5,
-      quality: 8
-    },
-    {
-      id: 2,
-      date: '2025-01-21',
-      bedtime: '00:15',
-      wakeupTime: '07:30',
-      sleepDuration: 7.25,
-      quality: 7
-    },
-    {
-      id: 3,
-      date: '2025-01-22',
-      bedtime: '23:45',
-      wakeupTime: '06:45',
-      sleepDuration: 7.0,
-      quality: 9
-    }
-  ]);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [isTracking, setIsTracking] = useState(false);
-  const [trackingStart, setTrackingStart] = useState(null);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
-  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
-
-  // 現在時刻を更新
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // 統計計算
-  const calculateStats = () => {
-    if (sleepRecords.length === 0) return null;
-    
-    const totalSleep = sleepRecords.reduce((sum, record) => sum + record.sleepDuration, 0);
-    const avgSleep = totalSleep / sleepRecords.length;
-    const avgQuality = sleepRecords.reduce((sum, record) => sum + record.quality, 0) / sleepRecords.length;
-    const bestSleep = Math.max(...sleepRecords.map(r => r.sleepDuration));
-    const worstSleep = Math.min(...sleepRecords.map(r => r.sleepDuration));
-    
-    return {
-      avgSleep: avgSleep.toFixed(1),
-      avgQuality: avgQuality.toFixed(1),
-      bestSleep: bestSleep.toFixed(1),
-      worstSleep: worstSleep.toFixed(1),
-      totalRecords: sleepRecords.length
-    };
-  };
-
-  const stats = calculateStats();
-
-  // 睡眠品質の評価
-  const getSleepQualityText = (quality) => {
-    if (quality >= 9) return { text: '最高', color: 'text-green-600', bg: 'bg-green-100' };
-    if (quality >= 7) return { text: '良好', color: 'text-blue-600', bg: 'bg-blue-100' };
-    if (quality >= 5) return { text: '普通', color: 'text-yellow-600', bg: 'bg-yellow-100' };
-    return { text: '改善要', color: 'text-red-600', bg: 'bg-red-100' };
-  };
-
-  // 睡眠時間の評価
-  const getSleepDurationText = (duration) => {
-    if (duration >= 8) return { text: '十分', color: 'text-green-600' };
-    if (duration >= 6.5) return { text: '適度', color: 'text-blue-600' };
-    return { text: '不足', color: 'text-red-600' };
-  };
-
-  // 個別削除
-  const deleteRecord = (id) => {
-    setSleepRecords(prev => prev.filter(record => record.id !== id));
-    setShowDeleteConfirm(null);
-  };
-
-  // 全削除
-  const clearAllRecords = () => {
-    setSleepRecords([]);
-    setShowClearAllConfirm(false);
-  };
-
-  // トラッキング開始/終了
-  const toggleTracking = () => {
-    if (isTracking) {
-      // 睡眠終了
-      const endTime = new Date();
-      const duration = (endTime - trackingStart) / (1000 * 60 * 60); // 時間に変換
-      
-      const newRecord = {
-        id: sleepRecords.length + 1,
-        date: endTime.toISOString().split('T')[0],
-        bedtime: trackingStart.toTimeString().slice(0, 5),
-        wakeupTime: endTime.toTimeString().slice(0, 5),
-        sleepDuration: parseFloat(duration.toFixed(1)),
-        quality: Math.floor(Math.random() * 4) + 7 // 7-10のランダム値
-      };
-      
-      setSleepRecords(prev => [newRecord, ...prev]);
-      setIsTracking(false);
-      setTrackingStart(null);
-    } else {
-      // 睡眠開始
-      setIsTracking(true);
-      setTrackingStart(new Date());
-    }
-  };
-
-  // ダッシュボード
-  const DashboardTab = () => (
-    <div className="space-y-6">
-      {/* 現在時刻 */}
-      <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold mb-2">現在時刻</h2>
-            <div className="text-4xl font-mono">
-              {currentTime.toLocaleTimeString('ja-JP', { hour12: false })}
-            </div>
-            <div className="text-lg opacity-90 mt-1">
-              {currentTime.toLocaleDateString('ja-JP', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                weekday: 'long'
-              })}
-            </div>
-          </div>
-          <Clock className="w-16 h-16 opacity-80" />
-        </div>
-      </div>
-
-      {/* トラッキングボタン */}
-      <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-        <div className="text-center">
-          <h3 className="text-xl font-bold mb-4">睡眠トラッキング</h3>
-          {isTracking && trackingStart && (
-            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
-              <p className="text-blue-700 font-medium">
-                睡眠開始: {trackingStart.toLocaleTimeString('ja-JP', { hour12: false })}
-              </p>
-              <p className="text-sm text-blue-600 mt-1">
-                経過時間: {Math.floor((currentTime - trackingStart) / (1000 * 60))}分
-              </p>
-            </div>
-          )}
-          <button
-            onClick={toggleTracking}
-            className={`px-8 py-4 rounded-xl font-bold text-lg transition-all duration-300 transform hover:scale-105 ${
-              isTracking 
-                ? 'bg-red-500 hover:bg-red-600 text-white' 
-                : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
-          >
-            {isTracking ? (
-              <>
-                <Sun className="w-6 h-6 inline mr-2" />
-                起床記録
-              </>
-            ) : (
-              <>
-                <Moon className="w-6 h-6 inline mr-2" />
-                就寝開始
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* 今日の概要 */}
-      {sleepRecords.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-          <h3 className="text-xl font-bold mb-4 flex items-center">
-            <Award className="w-6 h-6 mr-2 text-yellow-500" />
-            最新の睡眠記録
-          </h3>
-          <div className="space-y-4">
-            {sleepRecords.slice(0, 1).map(record => {
-              const qualityInfo = getSleepQualityText(record.quality);
-              const durationInfo = getSleepDurationText(record.sleepDuration);
-              
-              return (
-                <div key={record.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
-                  <div>
-                    <p className="font-medium text-gray-700">{record.date}</p>
-                    <p className="text-sm text-gray-500">
-                      {record.bedtime} - {record.wakeupTime}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-bold text-lg ${durationInfo.color}`}>
-                      {record.sleepDuration}時間
-                    </p>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${qualityInfo.bg} ${qualityInfo.color}`}>
-                      品質: {qualityInfo.text}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  // 統計タブ
-  const StatsTab = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-green-400 to-green-600 rounded-2xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium opacity-90">平均睡眠時間</h3>
-              <p className="text-3xl font-bold">{stats?.avgSleep}時間</p>
-            </div>
-            <TrendingUp className="w-10 h-10 opacity-80" />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium opacity-90">平均品質</h3>
-              <p className="text-3xl font-bold">{stats?.avgQuality}/10</p>
-            </div>
-            <Award className="w-10 h-10 opacity-80" />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium opacity-90">最長睡眠</h3>
-              <p className="text-3xl font-bold">{stats?.bestSleep}時間</p>
-            </div>
-            <Zap className="w-10 h-10 opacity-80" />
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-medium opacity-90">記録日数</h3>
-              <p className="text-3xl font-bold">{stats?.totalRecords}日</p>
-            </div>
-            <Calendar className="w-10 h-10 opacity-80" />
-          </div>
-        </div>
-      </div>
-
-      {/* 詳細統計 */}
-      <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-        <h3 className="text-xl font-bold mb-4">詳細分析</h3>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">推奨睡眠時間との比較</span>
-            <span className={`font-bold ${parseFloat(stats?.avgSleep) >= 7 ? 'text-green-600' : 'text-red-600'}`}>
-              {parseFloat(stats?.avgSleep) >= 7 ? '✓ 良好' : '⚠ 改善推奨'}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">睡眠品質の一貫性</span>
-            <span className={`font-bold ${parseFloat(stats?.avgQuality) >= 7 ? 'text-green-600' : 'text-yellow-600'}`}>
-              {parseFloat(stats?.avgQuality) >= 8 ? '優秀' : parseFloat(stats?.avgQuality) >= 7 ? '良好' : '普通'}
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">最短睡眠時間</span>
-            <span className={`font-bold ${parseFloat(stats?.worstSleep) >= 6 ? 'text-green-600' : 'text-red-600'}`}>
-              {stats?.worstSleep}時間
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 睡眠パターンの可視化 */}
-      <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-        <h3 className="text-xl font-bold mb-4">睡眠時間の推移</h3>
-        <div className="space-y-2">
-          {sleepRecords.slice(0, 7).map((record, index) => (
-            <div key={record.id} className="flex items-center space-x-4">
-              <span className="text-sm text-gray-500 w-20">{record.date}</span>
-              <div className="flex-1 bg-gray-200 rounded-full h-6 relative">
-                <div 
-                  className="bg-gradient-to-r from-blue-400 to-blue-600 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium"
-                  style={{ width: `${(record.sleepDuration / 12) * 100}%` }}
-                >
-                  {record.sleepDuration}h
-                </div>
-              </div>
-              <span className="text-sm text-gray-600 w-16">品質: {record.quality}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  // 履歴タブ
-  const HistoryTab = () => (
-    <div className="space-y-4">
-      <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold flex items-center">
-            <Calendar className="w-6 h-6 mr-2 text-blue-500" />
-            睡眠履歴
-          </h3>
-          {sleepRecords.length > 0 && (
-            <button
-              onClick={() => setShowClearAllConfirm(true)}
-              className="flex items-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              全削除
-            </button>
-          )}
-        </div>
-
-        {sleepRecords.length === 0 ? (
-          <div className="text-center py-12">
-            <Calendar className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500 text-lg">まだ睡眠記録がありません</p>
-            <p className="text-gray-400 text-sm mt-2">ダッシュボードから睡眠の記録を始めましょう</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {sleepRecords.map(record => {
-              const qualityInfo = getSleepQualityText(record.quality);
-              const durationInfo = getSleepDurationText(record.sleepDuration);
-              
-              return (
-                <div key={record.id} className="border rounded-xl p-4 hover:shadow-md transition-shadow relative">
-                  {/* 削除ボタン */}
-                  <button
-                    onClick={() => setShowDeleteConfirm(record.id)}
-                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    title="この記録を削除"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-
-                  <div className="flex items-center justify-between mb-3 pr-12">
-                    <h4 className="font-bold text-lg text-gray-800">{record.date}</h4>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${qualityInfo.bg} ${qualityInfo.color}`}>
-                      {qualityInfo.text}
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500 block">就寝時刻</span>
-                      <span className="font-medium text-gray-800">{record.bedtime}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block">起床時刻</span>
-                      <span className="font-medium text-gray-800">{record.wakeupTime}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block">睡眠時間</span>
-                      <span className={`font-bold ${durationInfo.color}`}>
-                        {record.sleepDuration}時間
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block">品質スコア</span>
-                      <span className="font-medium text-gray-800">{record.quality}/10</span>
-                    </div>
-                  </div>
-                  
-                  {/* 睡眠時間のバー */}
-                  <div className="mt-3">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${
-                          record.sleepDuration >= 8 ? 'bg-green-500' : 
-                          record.sleepDuration >= 6.5 ? 'bg-blue-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${Math.min((record.sleepDuration / 12) * 100, 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 個別削除確認モーダル */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
-              <h3 className="text-xl font-bold text-gray-800">記録を削除しますか？</h3>
-            </div>
-            <p className="text-gray-600 mb-6">
-              この睡眠記録を削除すると、元に戻すことはできません。
-            </p>
-            <div className="flex space-x-4">
-              <button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                キャンセル
-              </button>
-              <button
-                onClick={() => deleteRecord(showDeleteConfirm)}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-              >
-                削除する
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 全削除確認モーダル */}
-      {showClearAllConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
-              <h3 className="text-xl font-bold text-gray-800">全ての記録を削除しますか？</h3>
-            </div>
-            <p className="text-gray-600 mb-6">
-              全ての睡眠記録が削除され、統計データもリセットされます。この操作は元に戻すことができません。
-            </p>
-            <div className="flex space-x-4">
-              <button
-                onClick={() => setShowClearAllConfirm(false)}
-                className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                キャンセル
-              </button>
-              <button
-                onClick={clearAllRecords}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-              >
-                全削除する
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      <div className="max-w-4xl mx-auto p-4">
-        {/* ヘッダー */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            🌙 睡眠管理アプリ
-          </h1>
-          <p className="text-gray-600">質の高い睡眠で健康的な生活を</p>
-        </div>
-
-        {/* タブナビゲーション */}
-        <div className="flex flex-wrap justify-center mb-8 bg-white rounded-2xl p-2 shadow-lg border border-gray-100">
-          {[
-            { id: 'dashboard', label: 'ダッシュボード', icon: Clock },
-            { id: 'stats', label: '統計', icon: BarChart3 },
-            { id: 'history', label: '履歴', icon: Calendar }
-          ].map(tab => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center px-6 py-3 rounded-xl font-medium transition-all duration-300 ${
-                  activeTab === tab.id
-                    ? 'bg-blue-500 text-white shadow-lg transform scale-105'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <Icon className="w-5 h-5 mr-2" />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* コンテンツ */}
-        <div className="animate-fadeIn">
-          {activeTab === 'dashboard' && <DashboardTab />}
-          {activeTab === 'stats' && <StatsTab />}
-          {activeTab === 'history' && <HistoryTab />}
-        </div>
-      </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+```html
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ぐっすり夢時計</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #e0f7fa;
+            color: #263238;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
         }
-        .animate-fadeIn {
-          animation: fadeIn 0.5s ease-out;
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+            text-align: center;
         }
-      `}</style>
-    </div>
-  );
-};
+        h1 {
+            color: #00796b;
+            margin-bottom: 25px;
+            font-size: 2.2em;
+        }
+        #current-time {
+            font-size: 3.5em;
+            font-weight: bold;
+            color: #004d40;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+        }
+        .buttons button {
+            background-color: #00796b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .buttons button:hover {
+            background-color: #004d40;
+            transform: translateY(-2px);
+        }
+        .buttons button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-top: 30px;
+            border-bottom: 2px solid #b2dfdb;
+        }
+        .tab-button {
+            background-color: #e0f2f7;
+            color: #00796b;
+            border: none;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 1.1em;
+            border-radius: 8px 8px 0 0;
+            transition: background-color 0.3s ease;
+            margin: 0 2px;
+        }
+        .tab-button.active {
+            background-color: #00796b;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+            text-align: left;
+            max-height: 300px; /* スクロール可能にする */
+            overflow-y: auto; /* スクロールバーを表示 */
+            border-radius: 0 0 15px 15px;
+            background-color: #ffffff;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .sleep-record {
+            background-color: #f0fdfc;
+            border: 1px solid #b2dfdb;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.95em;
+        }
+        .sleep-record span {
+            display: block;
+        }
+        .sleep-record .date {
+            font-weight: bold;
+            color: #004d40;
+        }
+        .sleep-record .times {
+            color: #37474f;
+        }
+        .sleep-record .duration {
+            font-weight: bold;
+            color: #00796b;
+        }
+        #sleep-statistics p {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+        #sleep-statistics strong {
+            color: #004d40;
+        }
+        .no-records {
+            color: #78909c;
+            font-style: italic;
+            margin-top: 15px;
+        }
+        footer {
+            margin-top: 40px;
+            font-size: 0.85em;
+            color: #546e7a;
+        }
 
-export default SleepTrackerApp;
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            #current-time {
+                font-size: 2.8em;
+            }
+            .buttons button {
+                padding: 12px 20px;
+                font-size: 1em;
+            }
+            .tab-button {
+                padding: 10px 15px;
+                font-size: 1em;
+            }
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ぐっすり夢時計</h1>
+        <div id="current-time"></div>
+
+        <div class="buttons">
+            <button id="sleep-button">寝る</button>
+            <button id="wake-button" disabled>起きる</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="openTab('history')">睡眠履歴</button>
+            <button class="tab-button" onclick="openTab('statistics')">睡眠統計</button>
+        </div>
+
+        <div id="sleep-history" class="tab-content active">
+            <h2>睡眠履歴</h2>
+            <div id="records-list">
+                <p class="no-records">まだ睡眠記録がありません。</p>
+            </div>
+        </div>
+
+        <div id="sleep-statistics" class="tab-content">
+            <h2>睡眠統計</h2>
+            <p><strong>平均睡眠時間:</strong> <span id="average-sleep-time">0時間0分</span></p>
+            <p><strong>総睡眠時間:</strong> <span id="total-sleep-time">0時間0分</span></p>
+            <p><strong>記録回数:</strong> <span id="record-count">0回</span></p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2025 ぐっすり夢時計. All rights reserved.</p>
+    </footer>
+
+    <script>
+        const currentTimeElement = document.getElementById('current-time');
+        const sleepButton = document.getElementById('sleep-button');
+        const wakeButton = document.getElementById('wake-button');
+        const recordsList = document.getElementById('records-list');
+        const noRecordsMessage = recordsList.querySelector('.no-records');
+        const averageSleepTimeElement = document.getElementById('average-sleep-time');
+        const totalSleepTimeElement = document.getElementById('total-sleep-time');
+        const recordCountElement = document.getElementById('record-count');
+
+        let sleepStartTime = null;
+        const SLEEP_RECORDS_KEY = 'sleepRecords';
+
+        // 現在時刻の表示
+        function updateTime() {
+            const now = new Date();
+            const options = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            currentTimeElement.textContent = now.toLocaleTimeString('ja-JP', options);
+        }
+        setInterval(updateTime, 1000);
+        updateTime(); // 初回表示
+
+        // 睡眠記録の読み込み
+        function loadSleepRecords() {
+            const records = JSON.parse(localStorage.getItem(SLEEP_RECORDS_KEY) || '[]');
+            return records.sort((a, b) => new Date(b.sleepStart) - new Date(a.sleepStart)); // 最新のものが上に来るようにソート
+        }
+
+        // 睡眠記録の保存
+        function saveSleepRecords(records) {
+            localStorage.setItem(SLEEP_RECORDS_KEY, JSON.stringify(records));
+        }
+
+        // 睡眠記録の表示
+        function renderSleepRecords() {
+            const records = loadSleepRecords();
+            recordsList.innerHTML = ''; // 一度クリア
+            if (records.length === 0) {
+                noRecordsMessage.style.display = 'block';
+            } else {
+                noRecordsMessage.style.display = 'none';
+                records.forEach(record => {
+                    const sleepStart = new Date(record.sleepStart);
+                    const wakeUp = new Date(record.wakeUp);
+                    const durationMs = wakeUp - sleepStart;
+                    const durationHours = Math.floor(durationMs / (1000 * 60 * 60));
+                    const durationMinutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+
+                    const recordElement = document.createElement('div');
+                    recordElement.classList.add('sleep-record');
+                    recordElement.innerHTML = `
+                        <div>
+                            <span class="date">${sleepStart.toLocaleDateString('ja-JP')}</span>
+                            <span class="times">${sleepStart.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })} - ${wakeUp.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                        <span class="duration">${durationHours}時間${durationMinutes}分</span>
+                    `;
+                    recordsList.appendChild(recordElement);
+                });
+            }
+        }
+
+        // 統計の計算と表示
+        function updateStatistics() {
+            const records = loadSleepRecords();
+            let totalDurationMs = 0;
+            records.forEach(record => {
+                totalDurationMs += (new Date(record.wakeUp) - new Date(record.sleepStart));
+            });
+
+            const totalHours = Math.floor(totalDurationMs / (1000 * 60 * 60));
+            const totalMinutes = Math.floor((totalDurationMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            totalSleepTimeElement.textContent = `${totalHours}時間${totalMinutes}分`;
+            recordCountElement.textContent = `${records.length}回`;
+
+            if (records.length > 0) {
+                const averageDurationMs = totalDurationMs / records.length;
+                const averageHours = Math.floor(averageDurationMs / (1000 * 60 * 60));
+                const averageMinutes = Math.floor((averageDurationMs % (1000 * 60 * 60)) / (1000 * 60));
+                averageSleepTimeElement.textContent = `${averageHours}時間${averageMinutes}分`;
+            } else {
+                averageSleepTimeElement.textContent = '0時間0分';
+            }
+        }
+
+        // 「寝る」ボタンクリック
+        sleepButton.addEventListener('click', () => {
+            sleepStartTime = new Date();
+            sleepButton.disabled = true;
+            wakeButton.disabled = false;
+            alert('睡眠計測を開始しました。おやすみなさい！');
+        });
+
+        // 「起きる」ボタンクリック
+        wakeButton.addEventListener('click', () => {
+            if (sleepStartTime) {
+                const wakeUpTime = new Date();
+                const records = loadSleepRecords();
+                records.push({
+                    sleepStart: sleepStartTime.toISOString(),
+                    wakeUp: wakeUpTime.toISOString()
+                });
+                saveSleepRecords(records);
+                sleepStartTime = null;
+                sleepButton.disabled = false;
+                wakeButton.disabled = true;
+                alert('睡眠計測を終了しました。今日の睡眠、お疲れ様でした！');
+                renderSleepRecords(); // 履歴を更新
+                updateStatistics(); // 統計を更新
+            }
+        });
+
+        // タブ切り替え機能
+        function openTab(tabName) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+
+            document.getElementById(`sleep-${tabName}`).classList.add('active');
+            event.currentTarget.classList.add('active');
+
+            if (tabName === 'history') {
+                renderSleepRecords();
+            } else if (tabName === 'statistics') {
+                updateStatistics();
+            }
+        }
+
+        // 初期表示時の処理
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSleepRecords();
+            updateStatistics();
+            // ページロード時に、もし睡眠中であればボタンの状態を復元する（簡易版）
+            // より堅牢にするには、sleepStartTimeもlocalStorageに保存する必要があります。
+            // 今回はシンプルにするため、ページをリロードすると睡眠状態はリセットされます。
+        });
+    </script>
+</body>
+</html>
